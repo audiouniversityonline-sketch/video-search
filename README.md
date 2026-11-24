@@ -1,4 +1,4 @@
-# Audio University Video Search
+# Audio University Video Finder
 
 A static search page for Audio University's YouTube library. Members type a question and get the videos that cover it, with links that jump to the exact moment.
 
