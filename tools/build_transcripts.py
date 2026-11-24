@@ -1,6 +1,11 @@
 """Build transcripts.json for Video Finder's moment search.
 
 Usage: python3 tools/build_transcripts.py TRANSCRIPT_DIR [data.json] [syn.json]
+       python3 tools/build_transcripts.py --missing [data.json]   (print video ids in data.json
+                                                                   that transcripts.json lacks)
+
+If transcripts.json already exists, its entries are kept and the .md files in
+TRANSCRIPT_DIR are added or replace them, so a weekly update only needs the new videos.
 
 TRANSCRIPT_DIR holds the library's .md files (one per video, with a
 video_id line in the front matter and "[m:ss] text" caption lines).
@@ -43,6 +48,8 @@ def build(src, data_path='data.json', syn_path='syn.json'):
     syn_res = [(re.compile(r'(^|[^a-z0-9])' + re.escape(k) + r'(?=$|[^a-z0-9])'), v)
                for k, v in sorted(syn.items(), key=lambda kv: -len(kv[0]))]
     out = {}
+    if os.path.exists('transcripts.json'):
+        out = {k: v for k, v in json.load(open('transcripts.json')).items() if k in keep}
     for path in glob.glob(os.path.join(src, '*.md')):
         text = open(path, encoding='utf-8', errors='replace').read()
         m = re.search(r'video_id:\s*(\S+)', text)
@@ -73,4 +80,9 @@ def build(src, data_path='data.json', syn_path='syn.json'):
 
 
 if __name__ == '__main__':
-    build(*sys.argv[1:])
+    if sys.argv[1] == '--missing':
+        data = json.load(open(sys.argv[2] if len(sys.argv) > 2 else 'data.json'))
+        have = json.load(open('transcripts.json')) if os.path.exists('transcripts.json') else {}
+        print('\n'.join(v['id'] for v in data if v['id'] not in have))
+    else:
+        build(*sys.argv[1:])
