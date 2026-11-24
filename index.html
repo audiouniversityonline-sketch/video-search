@@ -158,7 +158,7 @@ function moments(v,q){
   const key=v.km.map((k,i)=>({sec:k[0],label:k[1],hit:kmHit(v,i,q),key:1})).filter(h=>h.hit);
   const said=bestLines(v,q,key.length?4:3).filter(c=>!key.some(k=>c.sec>=k.sec-10&&c.sec<=k.sec+40)&&!(key.length&&c.sec<20)).slice(0,key.length?2:3).map(c=>{
     const words=q.list.filter((w,i)=>trHits(v,q).per[i].includes(c.j)||trHits(v,q).per[i].includes(c.j+1));
-    return {sec:c.sec,said:1,words,sect:section(v,c.sec)}});
+    return {sec:c.sec,said:1,words,sect:section(v,c.sec)}}).filter(m=>!key.some(k=>k.label===m.sect));
   return key.concat(said).sort((a,b)=>a.sec-b.sec);
 }
 function card(v,q,open){
