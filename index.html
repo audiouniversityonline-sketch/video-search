@@ -46,6 +46,8 @@ select{height:44px;border-radius:10px;border:1px solid var(--line);background:va
 .mo a:hover{background:light-dark(#e8fff4,#10241a)}
 .mo .t{font-weight:800;color:var(--acc-ink);font-variant-numeric:tabular-nums;min-width:58px;white-space:nowrap}
 .mo a.hit .l{font-weight:500}
+.mo .in{color:var(--sub);font-size:14px}
+.mo .in b{font-weight:500;color:var(--ink)}
 .more.all{display:block;margin:8px auto 0;border:1px solid var(--line);border-radius:999px;padding:8px 20px}
 .more{background:none;border:0;color:var(--acc-ink);font:500 15px Jost,sans-serif;padding:8px 0;cursor:pointer;min-height:44px}
 mark{background:light-dark(#b9ffdc,#0f4a2d);color:inherit;border-radius:3px;padding:0 2px}
@@ -57,9 +59,6 @@ mark{background:light-dark(#b9ffdc,#0f4a2d);color:inherit;border-radius:3px;padd
 </head>
 <body>
 <div class="wrap">
-  <div class="top">
-    <div class="meta" id="count">Loading the video library…</div>
-  </div>
   <h1>AUDIO UNIVERSITY VIDEO FINDER</h1>
   <p class="lede">Search Audio University videos and jump straight to the part that answers your question.</p>
   <form id="f" role="search">
@@ -79,7 +78,7 @@ mark{background:light-dark(#b9ffdc,#0f4a2d);color:inherit;border-radius:3px;padd
 const POP=['gain staging','feedback','acoustic treatment','monitor mix','wireless microphones','audio interface setup','compression','phase','phantom power','subwoofer'];
 const STOP=new Set('a an and are at be best by can do does for from get good how i in into is it make my need of on or set should the to up use using video what when where which why with you your vs versus'.split(' '));
 const ALIAS={mic:'microphone',mics:'microphones',iem:'in-ear',iems:'in-ear',eq:'eq',hum:'ground loop',buzz:'ground loop',sub:'subwoofer',subs:'subwoofer',reverb:'reverb',verb:'reverb',interface:'audio interface',preamp:'preamp',daw:'daw',comp:'compression',compressor:'compression',wedge:'monitor',wedges:'monitor',pa:'pa system',acoustic:'acoustic',panels:'acoustic panel',latency:'latency',headphone:'headphones',cables:'cable',xlr:'xlr'};
-let DATA=[],SYN={};
+let DATA=[],SYN={},TR={};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=String(s%60).padStart(2,'0');return h?`${h}:${String(m).padStart(2,'0')}:${x}`:`${m}:${x}`};
@@ -97,31 +96,79 @@ function terms(q){
 }
 const RC={};
 function stem(w){if(w.length>5&&/[a-z]ing$/.test(w))return w.slice(0,-3);if(w.length>4&&/[a-z]ed$/.test(w))return w.slice(0,-2);return w}
-function wre(w){if(RC[w])return RC[w];const b=stem(w);const body=b.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/[- ]/g,'[ -]?');const suf=b===w?'(s|es)?':'(s|es|ed|ing)?';return RC[w]=new RegExp('(^|[^a-z0-9])'+body+suf+'(?=$|[^a-z0-9])')}
+function wre(w){if(RC[w])return RC[w];const b=stem(w);const body=b.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/[- ]/g,'[ -]?');const suf=b===w?'(s|es)?':'(s|es|e|ed|ing)?';return RC[w]=new RegExp('(^|[^a-z0-9])'+body+suf+'(?=$|[^a-z0-9])')}
 let IDF={};
 function idf(w,re){if(IDF[w]==null){const df=DATA.filter(v=>re.test(v._all)).length;IDF[w]=Math.log((DATA.length+1)/(df+1))+0.2}return IDF[w]}
+function trHits(v,q){
+  const L=TR[v.id];if(!L)return null;
+  if(v._tr&&v._tr.q===q)return v._tr;
+  const per=q.re.map(re=>L.map((l,j)=>re.test(l[1])?j:-1).filter(j=>j>=0));
+  const ph=q.bre.map(re=>L.map((l,j)=>re.test(l[1])?j:-1).filter(j=>j>=0));
+  return v._tr={q,per,ph};
+}
 function score(v,q,minCov=0.5){
-  let sc=0,matched=0,wsum=0;
+  let sc=0,matched=0,wsum=0,metaM=0;const th=trHits(v,q);
   q.list.forEach((w,i)=>{const re=q.re[i];const wt=idf(w,re);wsum+=wt;let hit=0,p=0;
     if(re.test(v._t)){p+=8;hit=1}
     if(re.test(v._tp)){p+=6;hit=1}
     if(re.test(v._g)){p+=5;hit=1}
     const km=v._km.filter(k=>re.test(k)).length;if(km){p+=3*Math.min(km,3);hit=1}
     if(re.test(v._s)){p+=2;hit=1}
+    if(hit)metaM+=wt;
+    const tn=th?th.per[i].length:0;if(tn){p+=0.6*Math.min(tn,6);hit=1}
     sc+=p*wt;if(hit)matched+=wt});
-  q.bi.forEach((b,i)=>{const re=q.bre[i];if(re.test(v._t))sc+=25;if(re.test(v._tp))sc+=20;if(v._km.some(k=>re.test(k)))sc+=15;if(re.test(v._s))sc+=6});
+  q.bi.forEach((b,i)=>{const re=q.bre[i];if(re.test(v._t))sc+=25;if(re.test(v._tp))sc+=20;if(v._km.some(k=>re.test(k)))sc+=15;if(re.test(v._s))sc+=6;if(th)sc+=4*Math.min(th.ph[i].length,5)});
   if(!matched)return 0;
   const cov=wsum?matched/wsum:0;if(cov<minCov)return 0;
+  const metaCov=wsum?metaM/wsum:0;
+  if(metaCov<0.5){
+    // found only in what was said: require a real discussion, not a passing word
+    if(!th)return 0;
+    if(q.list.length===1){if(th.per[0].length<2)return 0}
+    else if(!bestLines(v,q,1).length)return 0;
+    sc*=0.6;
+  }
   return sc*cov*cov+Math.log10(v.v+10)*0.3;
 }
-function kmHit(v,i,q){return q.re.some(re=>re.test(v._km[i]))}
+function bestLines(v,q,max){
+  const L=TR[v.id],th=trHits(v,q);if(!L||!th)return [];
+  const n=q.list.length,need=n===1?1:Math.max(2,Math.ceil(n*0.6));
+  const cand=new Map();
+  const phr=th.ph.flat();
+  if(phr.length)phr.forEach(j=>cand.set(j,1));else th.per.forEach(js=>js.forEach(j=>cand.set(j,1)));
+  const scored=[];
+  for(const j of cand.keys()){
+    let got=0,sc=0;
+    q.list.forEach((w,i)=>{const wt=idf(w,q.re[i]);if(th.per[i].includes(j)){got++;sc+=wt}else if(th.per[i].includes(j+1)){got++;sc+=wt*0.5}});
+    if(got<need)continue;
+    th.ph.forEach(js=>{if(js.includes(j))sc+=3});
+    if(L[j][0]<20)sc*=0.5;
+    scored.push({j,sec:L[j][0],sc});
+  }
+  scored.sort((a,b)=>b.sc-a.sc||a.sec-b.sec);
+  const pick=[];for(const c of scored){if(pick.length>=max)break;if(pick.some(p=>Math.abs(p.sec-c.sec)<45))continue;pick.push(c)}
+  return pick;
+}
+function kmHit(v,i,q){const t=v._km[i];if(q.bre.some(re=>re.test(t)))return true;const n=q.list.length,got=q.re.filter(re=>re.test(t)).length;return n<=1?got>0:got>=Math.max(2,Math.ceil(n*0.6))}
 function hl(text,q){let h=esc(text);for(const w of q.list.filter(w=>w.length>2).sort((a,b)=>b.length-a.length)){const r=new RegExp('('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig');h=h.replace(r,'<mark>$1</mark>')}return h}
+function section(v,sec){let d='';for(const k of v.km){if(k[0]<=sec+5)d=k[1];else break}return d}
+function moments(v,q){
+  if(!q.list.length)return [];
+  const key=v.km.map((k,i)=>({sec:k[0],label:k[1],hit:kmHit(v,i,q),key:1})).filter(h=>h.hit);
+  const said=bestLines(v,q,key.length?4:3).filter(c=>!key.some(k=>c.sec>=k.sec-10&&c.sec<=k.sec+40)&&!(key.length&&c.sec<20)).slice(0,key.length?2:3).map(c=>{
+    const words=q.list.filter((w,i)=>trHits(v,q).per[i].includes(c.j)||trHits(v,q).per[i].includes(c.j+1));
+    return {sec:c.sec,said:1,words,sect:section(v,c.sec)}});
+  return key.concat(said).sort((a,b)=>a.sec-b.sec);
+}
 function card(v,q,open){
-  const hits=v.km.map((k,i)=>({k,i,hit:kmHit(v,i,q)}));
-  const shown=open?hits:(hits.some(h=>h.hit)?hits.filter(h=>h.hit):hits.slice(0,3));
+  const found=moments(v,q);
+  const all=v.km.map((k,i)=>({sec:k[0],label:k[1],hit:found.some(f=>f.key&&f.sec===k[0]),key:1}));
+  let shown=open?all.concat(found.filter(f=>f.said)).sort((a,b)=>a.sec-b.sec):(found.length?found:all.slice(0,3));
   const back=s=>Math.max(0,s-2);
-  const mos=shown.map(({k,hit})=>`<a class="${hit?'hit':''}" href="https://www.youtube.com/watch?v=${esc(v.id)}&amp;t=${back(k[0])}s" target="_blank" rel="noopener"><span class="t">${fmt(k[0])}</span><span class="l">${hl(k[1],q)}</span></a>`).join('');
-  const rest=v.km.length-shown.length;
+  const mos=shown.map(m=>{const href=`https://www.youtube.com/watch?v=${esc(v.id)}&amp;t=${back(m.sec)}s`;
+    const lab=m.said?`<span class="l">Mentions <b>${esc(m.words.join(' '))}</b>${m.sect?` <span class="in">in “${esc(m.sect)}”</span>`:''}</span>`:`<span class="l">${hl(m.label,q)}</span>`;
+    return `<a class="${m.hit||m.said?'hit':''}" href="${href}" target="_blank" rel="noopener"><span class="t">${fmt(m.sec)}</span>${lab}</a>`}).join('');
+  const rest=open?0:v.km.length-shown.filter(m=>m.key).length;
   return `<article class="card"><a class="thumb" href="https://www.youtube.com/watch?v=${esc(v.id)}" target="_blank" rel="noopener" aria-label="Watch ${esc(v.t)}"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00FF88" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg><img src="https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg" alt="" loading="lazy" onerror="this.remove()"></a>
   <div><h2><a href="https://www.youtube.com/watch?v=${esc(v.id)}" target="_blank" rel="noopener">${esc(v.t)}</a></h2>
   <div class="info">${mon(v.d)} · ${esc(v.dur)}</div>
@@ -136,7 +183,7 @@ function run(){
   if(!q.list.length){list=DATA.slice().sort((a,b)=>b.d.localeCompare(a.d)).slice(0,8).map(v=>({v,s:0}));$('status').textContent='Newest videos'}
   else{list=DATA.map(v=>({v,s:score(v,q)})).filter(x=>x.s>0);
     if(!list.length&&q.list.length>1){list=DATA.map(v=>({v,s:score(v,q,0.01)})).filter(x=>x.s>0);if(list.length)loose=true}
-    const n=list.reduce((a,x)=>a+x.v.km.filter((k,i)=>kmHit(x.v,i,q)).length,0);
+    const n=list.reduce((a,x)=>a+moments(x.v,q).length,0);
     $('status').textContent=list.length?(loose?`No exact match for “${raw}”. Closest videos:`:`${list.length} video${list.length>1?'s':''} · ${n} matching moment${n===1?'':'s'}`):''}
   const so=$('sort').value;
   list.sort(so==='new'?(a,b)=>b.v.d.localeCompare(a.v.d):so==='views'?(a,b)=>b.v.v-a.v.v:(a,b)=>b.s-a.s);
@@ -151,10 +198,9 @@ $('chips').insertAdjacentHTML('beforeend',POP.map(p=>`<button type="button" clas
 $('chips').addEventListener('click',e=>{const c=e.target.closest('.chip');if(c){$('q').value=c.textContent;openSet.clear();shown=25;run()}});
 Promise.all([fetch('data.json').then(r=>r.json()),fetch('syn.json').then(r=>r.json()).catch(()=>({}))]).then(([d,s])=>{
   SYN=s;DATA=d.map(v=>({...v,_t:v.t.toLowerCase(),_tp:v.tp.join('; ').toLowerCase(),_g:v.g.join('; ').toLowerCase(),_s:v.s.toLowerCase(),_km:v.km.map(k=>k[1].toLowerCase())})).map(v=>({...v,_all:[v._t,v._tp,v._g,v._s,v._km.join(' ')].join(' ')}));
-  const n=DATA.reduce((a,v)=>a+v.km.length,0);
-  $('count').textContent=`${DATA.length} videos · ${n.toLocaleString()} moments`;
   run();
-}).catch(()=>{$('count').textContent='';$('res').innerHTML='<div class="empty">The video library could not load. Refresh the page to try again.</div>'});
+  fetch('transcripts.json').then(r=>r.json()).then(t=>{TR=t;DATA.forEach(v=>delete v._tr);if($('q').value.trim())run()}).catch(()=>{});
+}).catch(()=>{$('res').innerHTML='<div class="empty">The video library could not load. Refresh the page to try again.</div>'});
 }
 </script>
 <script>
