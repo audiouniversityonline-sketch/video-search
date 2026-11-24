@@ -48,6 +48,7 @@ select{height:44px;border-radius:10px;border:1px solid var(--line);background:va
 .mo a.hit .l{font-weight:500}
 .mo .in{color:var(--sub);font-size:14px}
 .mo .in b{font-weight:500;color:var(--ink)}
+.sugg{background:none;border:0;padding:0;font:inherit;color:var(--acc-ink);text-decoration:underline;cursor:pointer}
 .more.all{display:block;margin:8px auto 0;border:1px solid var(--line);border-radius:999px;padding:8px 20px}
 .more{background:none;border:0;color:var(--acc-ink);font:500 15px Jost,sans-serif;padding:8px 0;cursor:pointer;min-height:44px}
 mark{background:light-dark(#b9ffdc,#0f4a2d);color:inherit;border-radius:3px;padding:0 2px}
@@ -177,19 +178,39 @@ function card(v,q,open){
   ${rest>0?`<button class="more" data-id="${esc(v.id)}">Show all ${v.km.length} moments</button>`:''}</div></article>`;
 }
 let lastQ=null,openSet=new Set(),shown=25;
+let VOCAB=new Map();
+function addVocab(text,w){for(const t of text.toLowerCase().split(/[^a-z0-9'+\-]+/))if(t.length>2&&!/^\d+$/.test(t))VOCAB.set(t,(VOCAB.get(t)||0)+w)}
+function buildVocab(){VOCAB=new Map();DATA.forEach(v=>addVocab(v._all,3));for(const k in SYN)if(!k.includes(' '))VOCAB.set(k,(VOCAB.get(SYN[k])||1));for(const id in TR)for(const l of TR[id])addVocab(l[1],1)}
+function dist(a,b,max){if(Math.abs(a.length-b.length)>max)return max+1;let pp=null,prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){const cur=[i];let lo=i;for(let j=1;j<=b.length;j++){let c=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    if(pp&&i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])c=Math.min(c,pp[j-2]+1);cur[j]=c;lo=Math.min(lo,c)}if(lo>max)return max+1;pp=prev;prev=cur}return prev[b.length]}
+function correct(raw){
+  const words=raw.toLowerCase().replace(/[“”"]/g,' ').split(/\s+/).filter(Boolean);let changed=false;
+  const out=words.map(w=>{if(STOP.has(w)||w.length<4||VOCAB.has(w)||/\d/.test(w))return w;
+    const max=w.length<=5?1:2;let best=null,bd=max+1,bc=0;
+    for(const [t,c] of VOCAB){const d=dist(w,t,max)+(t[0]!==w[0]?0.5:0);if(d<bd||(d===bd&&c>bc)){best=t;bd=d;bc=c}}
+    if(best&&bd<=max){changed=true;return SYN[best]||best}return w});
+  return changed?out.join(' '):null;
+}
+function search(raw){const q=terms(raw);if(!q.list.length)return {q,list:[],loose:false};
+  let list=DATA.map(v=>({v,s:score(v,q)})).filter(x=>x.s>0),loose=false;
+  if(!list.length&&q.list.length>1){list=DATA.map(v=>({v,s:score(v,q,0.01)})).filter(x=>x.s>0);if(list.length)loose=true}
+  return {q,list,loose};
+}
 function run(){
-  const raw=$('q').value.trim();const q=terms(raw);lastQ=q;let loose=false;
-  let list;
+  let raw=$('q').value.trim();let r=search(raw),note='';
+  if(raw&&(!r.list.length||r.loose)){const fix=correct(raw);if(fix){const r2=search(fix);if(r2.list.length&&!r2.loose){note=`Showing results for <button type="button" class="sugg" data-q="${esc(fix)}">${esc(fix)}</button>`;r=r2}}}
+  else if(raw){const fix=correct(raw);if(fix&&search(fix).list.length>r.list.length)note=`Did you mean <button type="button" class="sugg" data-q="${esc(fix)}">${esc(fix)}</button>?`}
+  const q=r.q;lastQ=q;let list=r.list;const loose=r.loose;
   if(!q.list.length){list=DATA.slice().sort((a,b)=>b.d.localeCompare(a.d)).slice(0,8).map(v=>({v,s:0}));$('status').textContent='Newest videos'}
-  else{list=DATA.map(v=>({v,s:score(v,q)})).filter(x=>x.s>0);
-    if(!list.length&&q.list.length>1){list=DATA.map(v=>({v,s:score(v,q,0.01)})).filter(x=>x.s>0);if(list.length)loose=true}
-    const n=list.reduce((a,x)=>a+moments(x.v,q).length,0);
-    $('status').textContent=list.length?(loose?`No exact match for “${raw}”. Closest videos:`:`${list.length} video${list.length>1?'s':''} · ${n} matching moment${n===1?'':'s'}`):''}
+  else{const n=list.reduce((a,x)=>a+moments(x.v,q).length,0);
+    $('status').innerHTML=(note?note+' · ':'')+(list.length?(loose?`No exact match for “${esc(raw)}”. Closest videos:`:`${list.length} video${list.length>1?'s':''} · ${n} matching moment${n===1?'':'s'}`):'')}
   const so=$('sort').value;
   list.sort(so==='new'?(a,b)=>b.v.d.localeCompare(a.v.d):so==='views'?(a,b)=>b.v.v-a.v.v:(a,b)=>b.s-a.s);
   const total=list.length;list=list.slice(0,shown);
   $('res').innerHTML=list.length?list.map(x=>card(x.v,q,openSet.has(x.v.id))).join('')+(total>shown?`<button class="more all" id="moreres">Show ${Math.min(25,total-shown)} more videos (${total-shown} left)</button>`:''):`<div class="empty">No videos match “${esc(raw)}” yet. Try a broader word, like “monitor” instead of “wedge mix”, or pick a popular topic above.</div>`;
 }
+$('status').addEventListener('click',e=>{const b=e.target.closest('.sugg');if(b){$('q').value=b.dataset.q;openSet.clear();shown=25;run()}});
 $('f').addEventListener('submit',e=>{e.preventDefault();openSet.clear();shown=25;run()});
 $('sort').addEventListener('change',()=>{shown=25;run()});
 let tmr;$('q').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(()=>{openSet.clear();shown=25;run()},200)});
@@ -198,8 +219,8 @@ $('chips').insertAdjacentHTML('beforeend',POP.map(p=>`<button type="button" clas
 $('chips').addEventListener('click',e=>{const c=e.target.closest('.chip');if(c){$('q').value=c.textContent;openSet.clear();shown=25;run()}});
 Promise.all([fetch('data.json').then(r=>r.json()),fetch('syn.json').then(r=>r.json()).catch(()=>({}))]).then(([d,s])=>{
   SYN=s;DATA=d.map(v=>({...v,_t:v.t.toLowerCase(),_tp:v.tp.join('; ').toLowerCase(),_g:v.g.join('; ').toLowerCase(),_s:v.s.toLowerCase(),_km:v.km.map(k=>k[1].toLowerCase())})).map(v=>({...v,_all:[v._t,v._tp,v._g,v._s,v._km.join(' ')].join(' ')}));
-  run();
-  fetch('transcripts.json').then(r=>r.json()).then(t=>{TR=t;DATA.forEach(v=>delete v._tr);if($('q').value.trim())run()}).catch(()=>{});
+  buildVocab();run();
+  fetch('transcripts.json').then(r=>r.json()).then(t=>{TR=t;DATA.forEach(v=>delete v._tr);buildVocab();if($('q').value.trim())run()}).catch(()=>{});
 }).catch(()=>{$('res').innerHTML='<div class="empty">The video library could not load. Refresh the page to try again.</div>'});
 }
 </script>
