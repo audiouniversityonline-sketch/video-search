@@ -21,3 +21,11 @@ Embedded in Circle with `circle-embed-snippet.html` (Custom HTML block).
 3. Commit and push `data.json` and `syn.json`. GitHub Pages redeploys in about a minute.
 
 Links back up 2 seconds from each caption line so a clip starts cleanly. Caption lines are about 15 seconds apart, so a link can land a few seconds before the exact sentence.
+
+## Updating the data
+
+`data.json` is built from the Transcript Library Index sheet. From the repo root:
+
+    python3 tools/build_data.py sheet.json
+
+where `sheet.json` is the sheet's values (A1:O, header row first). `syn.json` only changes when the caption glossary is passed as a second argument.
