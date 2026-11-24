@@ -17,9 +17,7 @@
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Jost,system-ui,sans-serif;overflow-x:clip}
 .wrap{max-width:920px;margin:0 auto;padding:clamp(24px,4vw,48px) max(4vw,16px) 64px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:28px}
-.brand{font-weight:800;font-size:18px;letter-spacing:.02em}
-.brand b{color:var(--acc-ink)}
+.top{display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:28px}
 .meta{font-size:14px;color:var(--sub)}
 h1{margin:0 0 8px;font-weight:800;font-size:clamp(32px,5vw,46px);line-height:1.05;text-wrap:balance}
 .lede{margin:0 0 24px;color:var(--sub);font-size:17px;max-width:620px}
@@ -59,7 +57,6 @@ mark{background:light-dark(#b9ffdc,#0f4a2d);color:inherit;border-radius:3px;padd
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand">AUDIO <b>UNIVERSITY</b></div>
     <div class="meta" id="count">Loading the video library…</div>
   </div>
   <h1>Find the moment in any lesson</h1>
