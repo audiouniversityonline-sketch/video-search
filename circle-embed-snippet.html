@@ -1,0 +1,54 @@
+<!--
+  CIRCLE EMBED - paste this whole block into a Custom HTML block on the Circle page
+  that should hold the video search.
+
+  - The iframe resizes itself to fit the results (the page posts its height).
+  - If the search has not reported its height within 12 seconds, it never ran
+    (blocked frame, extension, network filter), so the embed is replaced with a
+    short note and a direct link that opens the search in its own tab.
+-->
+<iframe
+  src="https://audiouniversityonline-sketch.github.io/video-search/"
+  style="width:100%;border:0;height:1200px;display:block"
+  scrolling="no"
+  title="Audio University Video Search">
+  <a href="https://audiouniversityonline-sketch.github.io/video-search/">Open the video search</a>
+</iframe>
+<script>
+(function () {
+  var URL = 'https://audiouniversityonline-sketch.github.io/video-search/';
+  var ORIGIN = 'https://audiouniversityonline-sketch.github.io';
+  var alive = false;
+
+  window.addEventListener('message', function (e) {
+    if (e.origin !== ORIGIN) return;
+    var d = e.data;
+    if (!d || d.type !== 'vs:height' || typeof d.height !== 'number') return;
+    alive = true;
+    var frames = document.querySelectorAll('iframe[src*="video-search"]');
+    for (var i = 0; i < frames.length; i++) {
+      if (frames[i].contentWindow === e.source) {
+        frames[i].style.height = Math.max(600, Math.min(d.height, 20000)) + 'px';
+      }
+    }
+  });
+
+  setTimeout(function () {
+    if (alive) return;
+    var f = document.querySelector('iframe[src*="video-search"]');
+    if (!f || !f.parentNode) return;
+    var box = document.createElement('div');
+    box.setAttribute('style',
+      'border:1px solid #262626;border-radius:12px;padding:28px 24px;text-align:center;' +
+      'font-family:system-ui,-apple-system,sans-serif;line-height:1.6;background:#0a0a0a;color:#f5f5f5');
+    box.innerHTML =
+      '<div style="font-weight:700;font-size:17px;margin-bottom:8px">The video search could not open here</div>' +
+      '<div style="color:#a8a8a8;font-size:14px;margin-bottom:18px">Something in this browser is blocking embedded content. ' +
+      'Opening it in its own tab works around that.</div>' +
+      '<a href="' + URL + '" target="_blank" rel="noopener" ' +
+      'style="display:inline-block;padding:12px 22px;background:#00FF88;color:#0a0a0a;border-radius:8px;' +
+      'text-decoration:none;font-weight:700">Open the video search &rarr;</a>';
+    f.parentNode.replaceChild(box, f);
+  }, 12000);
+})();
+</script>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio University Video Search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a studio tool: direct, quick, nothing decorative.
+   IDEA: a console's track sheet: each video a strip, each moment a cue point you can jump to.
+   PICTURE: the live search and its cue-point results are the picture.
+   COLOUR and TYPE: Audio University black, white and #00FF88; Jost 800 + 400.
+   LAYOUT: one column up to 920px; search, chips, then results. */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0a0a0a);--ink:light-dark(#0a0a0a,#f5f5f5);--sub:light-dark(#555,#a8a8a8);--card:light-dark(#f4f4f4,#141414);--line:light-dark(#dedede,#262626);--acc:#00FF88;--acc-ink:light-dark(#00733d,#00FF88)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Jost,system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:920px;margin:0 auto;padding:clamp(24px,4vw,48px) max(4vw,16px) 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:28px}
+.brand{font-weight:800;font-size:18px;letter-spacing:.02em}
+.brand b{color:var(--acc-ink)}
+.meta{font-size:14px;color:var(--sub)}
+h1{margin:0 0 8px;font-weight:800;font-size:clamp(32px,5vw,46px);line-height:1.05;text-wrap:balance}
+.lede{margin:0 0 24px;color:var(--sub);font-size:17px;max-width:620px}
+form{display:flex;gap:10px;flex-wrap:wrap}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+input[type=search]{flex:1 1 380px;height:56px;padding:0 18px;border-radius:12px;border:2px solid var(--acc);background:var(--card);color:var(--ink);font:inherit;font-size:18px}
+input[type=search]:focus-visible,button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.go{height:56px;padding:0 26px;border-radius:12px;border:0;background:var(--acc);color:#0a0a0a;font:800 17px Jost,sans-serif;cursor:pointer}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0 8px}
+.chips span{font-size:14px;color:var(--sub)}
+.chip{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:15px Jost,sans-serif;cursor:pointer}
+.chip:hover{border-color:var(--acc)}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:20px 0 14px;font-size:15px;color:var(--sub)}
+select{height:44px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:15px Jost,sans-serif;padding:0 10px}
+.res{display:flex;flex-direction:column;gap:16px}
+.card{display:grid;grid-template-columns:200px minmax(0,1fr);gap:18px;padding:18px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
+.thumb{display:block;width:200px;aspect-ratio:16/9;border-radius:10px;background:#1c1c1c center/cover;position:relative;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb svg{position:absolute;inset:0;margin:auto}
+.card h2{margin:0 0 4px;font-size:20px;line-height:1.25;font-weight:800}
+.card h2 a{color:inherit;text-decoration:none}.card h2 a:hover{text-decoration:underline}
+.info{font-size:14px;color:var(--sub);margin-bottom:8px}
+.sum{margin:0 0 10px;font-size:16px}
+.mo{display:flex;flex-direction:column;gap:2px}
+.mo a{display:flex;gap:12px;align-items:baseline;min-height:36px;padding:4px 6px;margin:0 -6px;border-radius:8px;color:var(--ink);text-decoration:none}
+.mo a:hover{background:light-dark(#e8fff4,#10241a)}
+.mo .t{font-weight:800;color:var(--acc-ink);font-variant-numeric:tabular-nums;min-width:58px;white-space:nowrap}
+.mo a.hit .l{font-weight:500}
+.more{background:none;border:0;color:var(--acc-ink);font:500 15px Jost,sans-serif;padding:8px 0;cursor:pointer;min-height:44px}
+mark{background:light-dark(#b9ffdc,#0f4a2d);color:inherit;border-radius:3px;padding:0 2px}
+.empty{padding:28px;border:1px dashed var(--line);border-radius:16px;color:var(--sub)}
+.foot{margin-top:28px;padding:18px;border-radius:16px;border:1px dashed var(--line);font-size:15px;color:var(--sub)}
+@media(max-width:600px){.card{grid-template-columns:minmax(0,1fr)}.thumb{width:100%}}
+@media(prefers-reduced-motion:no-preference){.card{animation:in .25s ease-out both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">AUDIO <b>UNIVERSITY</b></div>
+    <div class="meta" id="count">Loading the video library…</div>
+  </div>
+  <h1>Find the moment in any lesson</h1>
+  <p class="lede">Search Audio University videos and jump straight to the part that answers your question.</p>
+  <form id="f" role="search">
+    <label for="q" class="sr">Search the video library</label>
+    <input id="q" type="search" placeholder="Try “monitor mix” or “phantom power”" autocomplete="off">
+    <button class="go" type="submit">Search</button>
+  </form>
+  <div class="chips" id="chips"><span>Popular:</span></div>
+  <div class="bar"><div id="status" aria-live="polite"></div>
+    <label>Sort <select id="sort"><option value="rel">Best match</option><option value="new">Newest</option><option value="views">Most viewed</option></select></label>
+  </div>
+  <div class="res" id="res"></div>
+  <p class="foot">Didn’t find it? Bring your question to Talkback Tuesday or post it in Conversations. Timestamps come from auto-generated captions, so a link can land a few seconds early or late.</p>
+</div>
+<script>
+{
+const POP=['gain staging','feedback','acoustic treatment','monitor mix','wireless microphones','audio interface setup','compression','phase','phantom power','subwoofer'];
+const STOP=new Set('a an and are at be best by can do does for from get good how i in into is it make my need of on or set should the to up use using video what when where which why with you your vs versus'.split(' '));
+const ALIAS={mic:'microphone',mics:'microphones',iem:'in-ear',iems:'in-ear',eq:'eq',hum:'ground loop',buzz:'ground loop',sub:'subwoofer',subs:'subwoofer',reverb:'reverb',verb:'reverb',interface:'audio interface',preamp:'preamp',daw:'daw',comp:'compression',compressor:'compression',wedge:'monitor',wedges:'monitor',pa:'pa system',acoustic:'acoustic',panels:'acoustic panel',latency:'latency',headphone:'headphones',cables:'cable',xlr:'xlr'};
+let DATA=[],SYN={};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=String(s%60).padStart(2,'0');return h?`${h}:${String(m).padStart(2,'0')}:${x}`:`${m}:${x}`};
+const mon=d=>{const [y,m]=d.split('-');return new Date(+y,+m-1,1).toLocaleDateString('en-US',{month:'short',year:'numeric'})};
+function terms(q){
+  let s=q.toLowerCase().replace(/[“”"]/g,' ').trim();
+  for(const [k,v] of Object.entries(SYN)){if(!s.includes(k)||s.includes(v))continue;
+    const r=new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?=$|[^a-z0-9])','g');s=s.replace(r,'$1'+v)}
+  const words=s.split(/[^a-z0-9'.\-+/]+/).filter(w=>w&&!STOP.has(w));
+  const out=new Set(words);
+  words.forEach(w=>{if(ALIAS[w])out.add(ALIAS[w])});
+  const bi=[];for(let i=0;i<words.length-1;i++)bi.push(words[i]+' '+words[i+1]);
+  const list=[...out];
+  return {phrase:s,list,bi,re:list.map(w=>wre(w)),bre:bi.map(b=>wre(b))};
+}
+const RC={};
+function wre(w){return RC[w]||(RC[w]=new RegExp('(^|[^a-z0-9])'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(s|es)?(?=$|[^a-z0-9])'))}
+let IDF={};
+function idf(w,re){if(IDF[w]==null){const df=DATA.filter(v=>re.test(v._all)).length;IDF[w]=Math.log((DATA.length+1)/(df+1))+0.2}return IDF[w]}
+function score(v,q){
+  let sc=0,matched=0,wsum=0;
+  q.list.forEach((w,i)=>{const re=q.re[i];const wt=idf(w,re);wsum+=wt;let hit=0,p=0;
+    if(re.test(v._t)){p+=8;hit=1}
+    if(re.test(v._tp)){p+=6;hit=1}
+    if(re.test(v._g)){p+=5;hit=1}
+    const km=v._km.filter(k=>re.test(k)).length;if(km){p+=3*Math.min(km,3);hit=1}
+    if(re.test(v._s)){p+=2;hit=1}
+    sc+=p*wt;if(hit)matched+=wt});
+  q.bi.forEach((b,i)=>{const re=q.bre[i];if(re.test(v._t))sc+=25;if(re.test(v._tp))sc+=20;if(v._km.some(k=>re.test(k)))sc+=15;if(re.test(v._s))sc+=6});
+  if(!matched)return 0;
+  const cov=wsum?matched/wsum:0;if(cov<0.5)return 0;
+  return sc*cov*cov+Math.log10(v.v+10)*0.3;
+}
+function kmHit(v,i,q){return q.re.some(re=>re.test(v._km[i]))}
+function hl(text,q){let h=esc(text);for(const w of q.list.filter(w=>w.length>2).sort((a,b)=>b.length-a.length)){const r=new RegExp('('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig');h=h.replace(r,'<mark>$1</mark>')}return h}
+function card(v,q,open){
+  const hits=v.km.map((k,i)=>({k,i,hit:kmHit(v,i,q)}));
+  const shown=open?hits:(hits.some(h=>h.hit)?hits.filter(h=>h.hit):hits.slice(0,3));
+  const back=s=>Math.max(0,s-2);
+  const mos=shown.map(({k,hit})=>`<a class="${hit?'hit':''}" href="https://www.youtube.com/watch?v=${esc(v.id)}&amp;t=${back(k[0])}s" target="_blank" rel="noopener"><span class="t">${fmt(k[0])}</span><span class="l">${hl(k[1],q)}</span></a>`).join('');
+  const rest=v.km.length-shown.length;
+  return `<article class="card"><a class="thumb" href="https://www.youtube.com/watch?v=${esc(v.id)}" target="_blank" rel="noopener" aria-label="Watch ${esc(v.t)}"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00FF88" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg><img src="https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg" alt="" loading="lazy" onerror="this.remove()"></a>
+  <div><h2><a href="https://www.youtube.com/watch?v=${esc(v.id)}" target="_blank" rel="noopener">${esc(v.t)}</a></h2>
+  <div class="info">${mon(v.d)} · ${esc(v.dur)}</div>
+  <p class="sum">${hl(v.s,q)}</p>
+  <div class="mo">${mos}</div>
+  ${rest>0?`<button class="more" data-id="${esc(v.id)}">Show all ${v.km.length} moments</button>`:''}</div></article>`;
+}
+let lastQ=null,openSet=new Set();
+function run(){
+  const raw=$('q').value.trim();const q=terms(raw);lastQ=q;
+  let list;
+  if(!q.list.length){list=DATA.slice().sort((a,b)=>b.d.localeCompare(a.d)).slice(0,8).map(v=>({v,s:0}));$('status').textContent='Newest videos'}
+  else{list=DATA.map(v=>({v,s:score(v,q)})).filter(x=>x.s>0);
+    const n=list.reduce((a,x)=>a+x.v.km.filter((k,i)=>kmHit(x.v,i,q)).length,0);
+    $('status').textContent=list.length?`${list.length} video${list.length>1?'s':''} · ${n} matching moment${n===1?'':'s'}`:''}
+  const so=$('sort').value;
+  list.sort(so==='new'?(a,b)=>b.v.d.localeCompare(a.v.d):so==='views'?(a,b)=>b.v.v-a.v.v:(a,b)=>b.s-a.s);
+  list=list.slice(0,25);
+  $('res').innerHTML=list.length?list.map(x=>card(x.v,q,openSet.has(x.v.id))).join(''):`<div class="empty">No videos match “${esc(raw)}” yet. Try a broader word, like “monitor” instead of “wedge mix”, or pick a popular topic above.</div>`;
+}
+$('f').addEventListener('submit',e=>{e.preventDefault();openSet.clear();run()});
+$('sort').addEventListener('change',run);
+let tmr;$('q').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(()=>{openSet.clear();run()},200)});
+$('res').addEventListener('click',e=>{const b=e.target.closest('.more');if(b){openSet.add(b.dataset.id);run()}});
+$('chips').insertAdjacentHTML('beforeend',POP.map(p=>`<button type="button" class="chip">${esc(p)}</button>`).join(''));
+$('chips').addEventListener('click',e=>{const c=e.target.closest('.chip');if(c){$('q').value=c.textContent;openSet.clear();run()}});
+Promise.all([fetch('data.json').then(r=>r.json()),fetch('syn.json').then(r=>r.json()).catch(()=>({}))]).then(([d,s])=>{
+  SYN=s;DATA=d.map(v=>({...v,_t:v.t.toLowerCase(),_tp:v.tp.join('; ').toLowerCase(),_g:v.g.join('; ').toLowerCase(),_s:v.s.toLowerCase(),_km:v.km.map(k=>k[1].toLowerCase())})).map(v=>({...v,_all:[v._t,v._tp,v._g,v._s,v._km.join(' ')].join(' ')}));
+  const n=DATA.reduce((a,v)=>a+v.km.length,0);
+  $('count').textContent=`${DATA.length} videos · ${n.toLocaleString()} moments`;
+  run();
+}).catch(()=>{$('count').textContent='';$('res').innerHTML='<div class="empty">The video library could not load. Refresh the page to try again.</div>'});
+}
+</script>
+<script>
+(function(){if(window.parent===window)return;var last=0;function post(){var h=Math.ceil(document.documentElement.scrollHeight);if(Math.abs(h-last)<2)return;last=h;try{window.parent.postMessage({type:'vs:height',height:h},'*')}catch(e){}}
+window.addEventListener('load',function(){post();try{new ResizeObserver(post).observe(document.body)}catch(e){}window.addEventListener('resize',post);setInterval(post,800)});})();
+</script>
+</body>
+</html>
