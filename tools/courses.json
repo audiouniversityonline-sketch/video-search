@@ -1,0 +1,445 @@
+{
+"mixing-essentials": {
+"space": 1395122,
+"slug": "mixing-essentials",
+"title": "Mixing Essentials",
+"sections": {
+"330611": [
+[
+1225975,
+"Meet Your Instructor"
+],
+[
+1277377,
+"What EQ Can Do"
+],
+[
+1277381,
+"Masking and Curves"
+],
+[
+1277383,
+"Boost or Cut"
+],
+[
+1277385,
+"EQ and Compression"
+],
+[
+1277387,
+"Experimenting with EQ"
+],
+[
+1277389,
+"Mixing with Your Eyes"
+],
+[
+1277393,
+"Drum Demo"
+],
+[
+1277429,
+"Bass Demo"
+],
+[
+1277431,
+"Guitar Demo"
+],
+[
+1277435,
+"Vocal Demo"
+]
+],
+"344668": [
+[
+1277642,
+"Introduction to Compression Techniques"
+],
+[
+1277660,
+"Exploring the Purpose and History of Compression"
+],
+[
+1317163,
+"Applying Compression in Various Listening Environments"
+],
+[
+1317164,
+"Essential Questions for Effective Compression Use"
+],
+[
+1317180,
+"Enhancing Mix Depth with Compression"
+],
+[
+1317186,
+"Harmonic Distortion in Compression"
+],
+[
+1317187,
+"Smart Compression vs Over-Reliance"
+],
+[
+1317189,
+"Practical Comparison of Compressor Types"
+],
+[
+1317191,
+"Balancing Dynamics and Harmonics"
+],
+[
+1317193,
+"Sine Wave Demo"
+],
+[
+1317197,
+"Advanced Compression Controls and Applications"
+],
+[
+1317198,
+"Active Listening and Identifying Mix Components"
+],
+[
+1317200,
+"Understanding Transients and Envelope Control"
+],
+[
+1317201,
+"Choosing the Right Attack and Release Settings"
+],
+[
+1317202,
+"Threshold Control and Harmonic Distortion"
+],
+[
+1317203,
+"Ratio Control"
+],
+[
+1317204,
+"Using Makeup Gain Effectively in Compression"
+],
+[
+1317212,
+"Kick Drum Demo"
+],
+[
+1317214,
+"Strategic Compression"
+],
+[
+1317216,
+"Applying the If-Then Compression Strategy"
+],
+[
+1317217,
+"Compressors as Time Domain Processors"
+],
+[
+1317218,
+"How to Align Compression with Time and Transients"
+],
+[
+1317220,
+"Controlling Harmonics with Threshold and Ratio"
+],
+[
+1317221,
+"Using Compression to Enhance the Mix \"Feel\""
+],
+[
+1317222,
+"Final Thoughts on Mastering Compression and Patience in Mixing"
+],
+[
+1317223,
+"Drums Demo"
+]
+],
+"353707": [
+[
+1317288,
+"Introduction to Delay in Mixing"
+],
+[
+1317289,
+"Delay and Human Perception"
+],
+[
+1317290,
+"Eyes, Ears, and Perception in Sound Design"
+],
+[
+1317291,
+"Manipulating Space and Perception with Delays"
+],
+[
+1317292,
+"Time Windows and Binaural Perception"
+],
+[
+1317294,
+"Binaural Perception and Directionality"
+],
+[
+1317295,
+"The Binaural Time Window and Panning Techniques"
+],
+[
+1317296,
+"Early Reflection Time Window and Room Acoustics"
+],
+[
+1317297,
+"Late Reflection Time Window and Room Depth"
+],
+[
+1317298,
+"Structuring Space with Reflections and Delays"
+],
+[
+1319992,
+"Demo: Binaural Time Window (< 10ms)"
+],
+[
+1319993,
+"Demo: Early Reflections Time Window (15-35ms)"
+],
+[
+1319994,
+"Demo: Late Reflection Time Window (35-60ms)"
+],
+[
+1320105,
+"Guitar Demo"
+]
+],
+"355319": [
+[
+1319970,
+"Introduction to Reverb Concepts"
+],
+[
+1319972,
+"Understanding Reverb in Recorded Spaces"
+],
+[
+1319973,
+"Performer and Listener Interaction with Reverb"
+],
+[
+1319975,
+"Resonance and Harmonics in Reverb"
+],
+[
+1319977,
+"Adjusting Reverb Timing and Avoiding Mud"
+],
+[
+1319978,
+"Using Reverb for Immersive Mixing"
+],
+[
+1319979,
+"Final Thoughts on Reverb"
+],
+[
+1320108,
+"Snare Drum Demo"
+],
+[
+1320109,
+"Banjo & Piano Demo"
+],
+[
+1324229,
+"Vocal Demo"
+],
+[
+1380670,
+"Backing Vocals Demo"
+]
+],
+"391349": [
+[
+1455448,
+"Putting It All Together: Introduction"
+],
+[
+1455449,
+"Session Setup for Mixing"
+],
+[
+1455450,
+"Integrating Bass into the Mix"
+],
+[
+1455451,
+"Setting Up Drum Routing for Mixing"
+],
+[
+1455452,
+"Shaping the Kick and Snare"
+],
+[
+1455453,
+"Overhead Mixing and Drum Bus Compression"
+],
+[
+1573469,
+"Mixing Acoustic Guitar"
+],
+[
+1652353,
+"Mixing Rhythm Electric Guitars"
+],
+[
+1652354,
+"Bringing Electric Guitars to Life"
+],
+[
+1714784,
+"Mixing Guitar Solos for Clarity and Impact"
+],
+[
+1770902,
+"Preparing Vocals for a Mix (Part 1)"
+],
+[
+1770911,
+"Preparing Vocals for a Mix (Part 2)"
+],
+[
+2033339,
+"Controlling Vocal Dynamics with Dual Compression"
+],
+[
+2058588,
+"Tuning Vocals for Clarity and Feel"
+],
+[
+2079291,
+"Refining Vocal Tuning in Dynamic Sections"
+],
+[
+2137881,
+"Finalizing the Vocal with Automation and Tone Shaping"
+],
+[
+2195772,
+"Preparing Your Session for the Final Mix"
+],
+[
+2385209,
+"Finishing the Mix: Automation, EQ, and Compression"
+],
+[
+2421309,
+"Final Stage Mixing - Automation, Balance, and Cohesion"
+]
+]
+},
+"section_names": {
+"330611": "Part 1: EQ",
+"344668": "Part 2: Compression",
+"353707": "Part 3: Delay",
+"355319": "Part 4: Reverb",
+"391349": "Part 5: Putting It All Together"
+}
+},
+"live-sound-101": {
+"space": 2670899,
+"slug": "live-sound-101",
+"title": "Live Sound 101",
+"sections": {
+"1048186": [
+[
+3984525,
+"Course Introduction"
+]
+],
+"1048188": [
+[
+3984527,
+"Signal Flow"
+],
+[
+3984531,
+"Tracing a Signal Chain"
+]
+],
+"1048190": [
+[
+3984535,
+"Power, Cables, & Placement"
+],
+[
+3984537,
+"Outputs"
+]
+],
+"1048191": [
+[
+3984542,
+"Microphone Types"
+],
+[
+3984544,
+"Microphone Feedback"
+],
+[
+3984547,
+"DI Boxes"
+],
+[
+3984549,
+"Playback Devices"
+]
+],
+"1048194": [
+[
+3984552,
+"Channel Strip"
+],
+[
+3984561,
+"Auxes, Busses & Master Section"
+],
+[
+3984574,
+"Calibrating the System"
+]
+],
+"1048196": [
+[
+3984576,
+"Soundcheck"
+],
+[
+3984578,
+"Troubleshooting"
+],
+[
+3984580,
+"Advance Work"
+],
+[
+3984582,
+"Workbox"
+],
+[
+3984584,
+"Final Lesson"
+]
+]
+},
+"section_names": {
+"1048186": "Start Here",
+"1048188": "Section 1: Signal Flow",
+"1048190": "Section 2: System Setup",
+"1048191": "Section 3: Connecting Inputs",
+"1048194": "Section 4: The Console",
+"1048196": "Section 5: Soundcheck & Show Day"
+}
+}
+}

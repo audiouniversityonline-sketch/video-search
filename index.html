@@ -63,6 +63,14 @@ select{height:44px;border-radius:10px;border:1px solid var(--line);background:va
 .pl .mo{margin-top:8px;max-height:30vh;overflow-y:auto;overflow-x:hidden}
 .pl .mo a.now{background:light-dark(#e8fff4,#10241a)}
 .playall{background:var(--acc);color:#000;border:0;border-radius:999px;font:500 14px Jost,sans-serif;padding:6px 14px;cursor:pointer;margin-left:8px}
+.mem{border:1px solid var(--acc);border-radius:14px;padding:14px 16px;margin:4px 0 14px;background:light-dark(#f2fff8,#0d1a14)}
+.mem h3{margin:0 0 2px;font-size:15px;font-weight:500;color:var(--acc-ink)}
+.mem .why{margin:0 0 8px;font-size:14px;color:var(--sub)}
+.mem a.les{display:block;padding:8px 0;border-top:1px solid var(--line);color:var(--ink);text-decoration:none}
+.mem a.les:first-of-type{border-top:0}
+.mem .crs{font-size:13px;color:var(--sub)}
+.mem .ln{font-weight:500;font-size:16px}
+.mem .at{font-size:14px;color:var(--sub)}
 .sugg{background:none;border:0;padding:0;font:inherit;color:var(--acc-ink);text-decoration:underline;cursor:pointer}
 .more.all{display:block;margin:8px auto 0;border:1px solid var(--line);border-radius:999px;padding:8px 20px}
 .more{background:none;border:0;color:var(--acc-ink);font:500 15px Jost,sans-serif;padding:8px 0;cursor:pointer;min-height:44px}
@@ -253,7 +261,8 @@ function run(){
   list.sort(so==='new'?(a,b)=>b.v.d.localeCompare(a.v.d):so==='views'?(a,b)=>b.v.v-a.v.v:(a,b)=>b.s-a.s);
   LASTLIST=q.list.length&&!loose?list:[];if(LASTLIST.length>1&&$('status').innerHTML)$('status').insertAdjacentHTML('beforeend',' <button type="button" class="playall">▶ Play top clips</button>');
   const total=list.length;list=list.slice(0,shown);
-  $('res').innerHTML=list.length?list.map(x=>card(x.v,q,openSet.has(x.v.id))).join('')+(total>shown?`<button class="more all" id="moreres">Show ${Math.min(25,total-shown)} more videos (${total-shown} left)</button>`:''):`<div class="empty">No videos match “${esc(raw)}” yet. Try a broader word, like “monitor” instead of “wedge mix”, or pick a popular topic above.<div style="margin-top:12px"><button type="button" class="more" id="request">Request a video on this topic</button></div></div>`;
+  const mb=q.list.length?memberBlock(raw):'';
+  $('res').innerHTML=list.length?list.map((x,i)=>(i===Math.min(3,list.length)-1&&mb?card(x.v,q,openSet.has(x.v.id))+mb:card(x.v,q,openSet.has(x.v.id)))).join('')+(total>shown?`<button class="more all" id="moreres">Show ${Math.min(25,total-shown)} more videos (${total-shown} left)</button>`:''):mb+`<div class="empty">No videos match “${esc(raw)}” yet. Try a broader word, like “monitor” instead of “wedge mix”, or pick a popular topic above.<div style="margin-top:12px"><button type="button" class="more" id="request">Request a video on this topic</button></div></div>`;
 }
 
 // ---------- in-page player and clip playlists ----------
@@ -292,11 +301,50 @@ $('pl').addEventListener('click',e=>{if(e.target.id==='pl')closePl()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('pl').classList.contains('on'))closePl()});
 $('plmo').addEventListener('click',e=>{const st=e.target.closest('a[data-step]');if(st){e.preventDefault();PL.i=+st.dataset.step;playClip();return}const a=e.target.closest('a[data-sec]');if(!a)return;e.preventDefault();const sec=+a.dataset.sec;PL.queue=[];$('plclip').textContent='';logClick(PL.v.id+'@'+sec);play(PL.v,sec)});
 
+
+// ---------- members-only course lessons (hashed index, no course text in this file) ----------
+let MEM=null;
+const MSTOP=new Set("a about above after again against all also am an and any are as at be because been before being below between both but by can could did do does doing don't down during each even every few for from further get gets getting go goes going gonna got had has have having he her here hers herself him himself his how i i'd i'll i'm i've if in into is it it's its itself just kind let let's like little lot make makes making me might more most much my myself need no nor not now of off oh ok okay on once one only or other our ours ourselves out over own pretty really right said same say says see she should so some something sort still such sure take than that that's the their theirs them themselves then there there's these they they're thing things think this those through to too um uh up us use used using very want was way we we'll we're we've well were what what's when where which while who whom why will with would yeah yes you you'd you'll you're you've your yours yourself yourselves actually basically maybe probably definitely literally".split(' '));
+let MSYN=null;
+function mstem(t){t=t.replace(/'s$/,'');if(t.length>5&&t.endsWith('ing'))return t.slice(0,-3);if(t.length>4&&t.endsWith('ed'))return t.slice(0,-2);if(t.length>3&&t.endsWith('s')&&!t.endsWith('ss'))return t.slice(0,-1);return t}
+const ENC=new TextEncoder();
+function fnv(str){let h=0x811c9dc5;for(const b of ENC.encode(str)){h^=b;h=Math.imul(h,0x01000193)>>>0}return (h>>>8).toString(16)}
+function mtokens(raw){
+  if(!MSYN)MSYN=Object.keys(SYN).sort((a,b)=>b.length-a.length).map(k=>[new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?=$|[^a-z0-9])','g'),SYN[k]]);
+  let s=' '+raw.toLowerCase()+' ';for(const [r,c] of MSYN)s=s.replace(r,(m,a)=>a+c);
+  return (s.match(/[a-z0-9][a-z0-9'+\-]*[a-z0-9+]|[a-z0-9]/g)||[]).map(t=>t.replace(/^[.'-]+|[.'-]+$/g,'')).filter(t=>t&&!MSTOP.has(t)).map(mstem);
+}
+function memberHits(raw){
+  if(!MEM||!raw.trim())return [];
+  const T=[...new Set(mtokens(raw))];if(!T.length)return [];
+  const th=T.map(fnv),bh=T.slice(1).map((t,i)=>fnv(T[i]+' '+t));
+  const out=[];
+  for(const L of MEM.lessons){
+    let best=null,bs=0,count=0;const nt=new Set(L.nt.split(' '));const nameHit=th.filter(h=>nt.has(h)).length;
+    for(let i=0;i<L.w.length;i++){
+      const a=new Set(L.w[i][1].split(' ')),b=L.w[i+1]?new Set(L.w[i+1][1].split(' ')):null;
+      const got=th.filter(h=>a.has(h)).length,near=th.filter(h=>a.has(h)||(b&&b.has(h))).length,bi=bh.filter(h=>a.has(h)).length;
+      const ok=T.length===1?got>0:(bi>0||near===T.length);
+      if(!ok)continue;count++;const sc=got+2*bi;if(sc>bs){bs=sc;best=L.w[i][0]}
+    }
+    if(T.length===1&&count<2&&!nameHit)continue;
+    if(best===null&&nameHit<T.length)continue;
+    out.push({L,at:best,score:bs+Math.min(count,6)*0.5+nameHit*3});
+  }
+  return out.sort((x,y)=>y.score-x.score).slice(0,3);
+}
+function memberBlock(raw){
+  const hits=memberHits(raw);if(!hits.length)return '';
+  const q=esc(raw.trim());
+  return `<div class="mem"><h3>🔒 In the Audio University membership</h3><p class="why">Members-only course lessons that cover “${q}”.</p>`+hits.map(h=>{const c=MEM.courses[h.L.c];const url=`https://community.audiouniversityonline.com/c/${c.slug}/sections/${h.L.s}/lessons/${h.L.id}`;
+    return `<a class="les" href="${url}" target="_top" data-lesson="${h.L.id}"><div class="crs">${esc(c.t)} · ${esc(h.L.sn)}</div><div class="ln">${esc(h.L.n)}</div>${h.at!==null?`<div class="at">Covered around ${fmt(h.at)} of the lesson</div>`:''}</a>`}).join('')+`</div>`;
+}
+fetch('members.json').then(r=>r.ok?r.json():null).then(m=>{if(m){MEM=m;if($('q').value.trim())run()}}).catch(()=>{});
 $('status').addEventListener('click',e=>{if(e.target.closest('.playall')){playAll(LASTLIST,lastQ);return}const b=e.target.closest('.sugg');if(b){$('q').value=b.dataset.q;openSet.clear();shown=25;run()}});
 $('f').addEventListener('submit',e=>{e.preventDefault();openSet.clear();shown=25;run()});
 $('sort').addEventListener('change',()=>{shown=25;run()});
 let tmr;$('q').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(()=>{openSet.clear();shown=25;run()},200)});
-$('res').addEventListener('click',e=>{const a=e.target.closest('a[href*="youtube.com/watch"]');if(a){if(pendingLog){clearTimeout(logT);pendingLog()}const m=a.href.match(/v=([^&]+)(?:&t=(\d+)s)?/);if(m)logClick(m[1]+'@'+(m[2]||0));
+$('res').addEventListener('click',e=>{const ml=e.target.closest('a[data-lesson]');if(ml){if(pendingLog){clearTimeout(logT);pendingLog()}logClick('LESSON:'+ml.dataset.lesson);flushLog()}const a=e.target.closest('a[href*="youtube.com/watch"]');if(a){if(pendingLog){clearTimeout(logT);pendingLog()}const m=a.href.match(/v=([^&]+)(?:&t=(\d+)s)?/);if(m)logClick(m[1]+'@'+(m[2]||0));
     if(m&&!(e.metaKey||e.ctrlKey||e.shiftKey||e.button)){const v=DATA.find(x=>x.id===m[1]);if(v){e.preventDefault();PL.queue=[];PL.path=null;$('plclip').textContent='';play(v,(+m[2]||0)+(m[2]?2:0));return}}}
   if(e.target.closest('#request')){clearTimeout(logT);pendingLog=null;logSearch($('q').value,0,0,'');logClick('REQUEST');flushLog();e.target.closest('.empty').innerHTML='Thanks. Your request was noted and helps decide what Kyle covers next. Members can also ask in <a href="https://community.audiouniversityonline.com/c/conversations" target="_top">Conversations</a>.';return}
   if(e.target.closest('#moreres')){shown+=25;run();return}const b=e.target.closest('.more');if(b){openSet.add(b.dataset.id);run()}});
