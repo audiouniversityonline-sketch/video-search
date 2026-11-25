@@ -64,8 +64,9 @@ select{height:44px;border-radius:10px;border:1px solid var(--line);background:va
 .pl .mo a.now{background:light-dark(#e8fff4,#10241a)}
 .playall{background:var(--acc);color:#000;border:0;border-radius:999px;font:500 14px Jost,sans-serif;padding:6px 14px;cursor:pointer;margin-left:8px}
 .mem{border:1px solid var(--acc);border-radius:14px;padding:14px 16px;margin:4px 0 14px;background:light-dark(#f2fff8,#0d1a14)}
-.mem h3{margin:0 0 2px;font-size:15px;font-weight:500;color:var(--acc-ink)}
-.mem .why{margin:0 0 8px;font-size:14px;color:var(--sub)}
+.mem h3{margin:0 0 4px;font-size:15px;font-weight:500;color:var(--acc-ink);display:flex;align-items:center;gap:7px}
+.mem .lk{flex:none;color:var(--acc-ink)}
+.mem .memmore{margin-top:6px;padding:8px 0 0;border:0;border-top:1px solid var(--line);background:none;width:100%;text-align:left;font:inherit;font-size:14px;font-weight:500;color:var(--acc-ink);cursor:pointer}
 .mem a.les{display:block;padding:8px 0;border-top:1px solid var(--line);color:var(--ink);text-decoration:none}
 .mem a.les:first-of-type{border-top:0}
 .mem .crs{font-size:13px;color:var(--sub)}
@@ -314,6 +315,8 @@ function mtokens(raw){
   let s=' '+raw.toLowerCase()+' ';for(const [r,c] of MSYN)s=s.replace(r,(m,a)=>a+c);
   return (s.match(/[a-z0-9][a-z0-9'+\-]*[a-z0-9+]|[a-z0-9]/g)||[]).map(t=>t.replace(/^[.'-]+|[.'-]+$/g,'')).filter(t=>t&&!MSTOP.has(t)).map(mstem);
 }
+const TITLE_H=new Map();
+function hashesOf(key,text){let h=TITLE_H.get(key);if(!h){h=new Set(mtokens(text).map(fnv));TITLE_H.set(key,h)}return h}
 function memberHits(raw){
   if(!MEM||!raw.trim())return [];
   const T=[...new Set(mtokens(raw))];if(!T.length)return [];
@@ -321,30 +324,40 @@ function memberHits(raw){
   const out=[];
   for(const L of MEM.lessons){
     let best=null,bs=0,count=0;const nt=new Set(L.nt.split(' '));const nameHit=th.filter(h=>nt.has(h)).length;
+    const tt=hashesOf('l'+L.id,L.n);const title=th.every(h=>tt.has(h));
+    const sh=hashesOf('s'+L.s,L.sn),ch=hashesOf('c'+L.c,MEM.courses[L.c].t);const home=th.every(h=>ch.has(h))*2+th.every(h=>sh.has(h));
     for(let i=0;i<L.w.length;i++){
       const a=new Set(L.w[i][1].split(' ')),b=L.w[i+1]?new Set(L.w[i+1][1].split(' ')):null;
       const got=th.filter(h=>a.has(h)).length,near=th.filter(h=>a.has(h)||(b&&b.has(h))).length,bi=bh.filter(h=>a.has(h)).length;
       const ok=T.length===1?got>0:(bi>0||near===T.length);
       if(!ok)continue;count++;const sc=got+2*bi;if(sc>bs){bs=sc;best=L.w[i][0]}
     }
-    if(T.length===1&&count<2&&!nameHit)continue;
-    if(best===null&&nameHit<T.length)continue;
-    out.push({L,at:best,score:bs+Math.min(count,6)*0.5+nameHit*3});
+    if(!title&&T.length===1&&count<2&&!nameHit)continue;
+    if(!title&&best===null&&nameHit<T.length)continue;
+    out.push({L,title,home,at:title?null:best,score:bs+Math.min(count,6)*0.5+nameHit});
   }
-  return out.sort((x,y)=>y.score-x.score).slice(0,3);
+  // Lessons whose title matches come first, favoring a course or section named for the topic, in course order.
+  // The rest follow by how strongly the topic comes up in them.
+  return out.sort((x,y)=>(y.title-x.title)||(x.title?(y.home-x.home)||(x.L.c-y.L.c)||((x.L.so||0)-(y.L.so||0))||(x.L.o-y.L.o):(y.score-x.score)));
 }
-function memberBlock(raw){
+const LOCK='<svg class="lk" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2" fill="currentColor"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>';
+const MEM_MAX=15;
+function lessonRow(h){const c=MEM.courses[h.L.c];const url=`https://community.audiouniversityonline.com/c/${c.slug}/sections/${h.L.s}/lessons/${h.L.id}`;
+  return `<a class="les" href="${url}" target="_top" data-lesson="${h.L.id}"><div class="crs">${esc(c.t)} · ${esc(h.L.sn)}</div><div class="ln">${esc(h.L.n)}</div>${h.at!==null&&h.at>=30?`<div class="at">Around ${fmt(h.at)}</div>`:''}</a>`}
+let MEMQ='';
+function memberBlock(raw,all){
   const hits=memberHits(raw);if(!hits.length)return '';
-  const q=esc(raw.trim());
-  return `<div class="mem"><h3>🔒 In the Audio University membership</h3><p class="why">Members-only course lessons that cover “${q}”.</p>`+hits.map(h=>{const c=MEM.courses[h.L.c];const url=`https://community.audiouniversityonline.com/c/${c.slug}/sections/${h.L.s}/lessons/${h.L.id}`;
-    return `<a class="les" href="${url}" target="_top" data-lesson="${h.L.id}"><div class="crs">${esc(c.t)} · ${esc(h.L.sn)}</div><div class="ln">${esc(h.L.n)}</div>${h.at!==null?`<div class="at">Covered around ${fmt(h.at)} of the lesson</div>`:''}</a>`}).join('')+`</div>`;
+  MEMQ=raw;const show=all?hits.slice(0,MEM_MAX):hits.slice(0,3);
+  const rest=Math.min(hits.length,MEM_MAX)-show.length;
+  const more=rest>0?`<button class="memmore" type="button">${hits.length<=MEM_MAX?`See all ${hits.length} lessons`:`See ${rest} more lessons`}</button>`:'';
+  return `<div class="mem"><h3>${LOCK}Members-only lessons on “${esc(raw.trim())}”</h3>`+show.map(lessonRow).join('')+more+`</div>`;
 }
 fetch('members.json').then(r=>r.ok?r.json():null).then(m=>{if(m){MEM=m;if($('q').value.trim())run()}}).catch(()=>{});
 $('status').addEventListener('click',e=>{if(e.target.closest('.playall')){playAll(LASTLIST,lastQ);return}const b=e.target.closest('.sugg');if(b){$('q').value=b.dataset.q;openSet.clear();shown=25;run()}});
 $('f').addEventListener('submit',e=>{e.preventDefault();openSet.clear();shown=25;run()});
 $('sort').addEventListener('change',()=>{shown=25;run()});
 let tmr;$('q').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(()=>{openSet.clear();shown=25;run()},200)});
-$('res').addEventListener('click',e=>{const ml=e.target.closest('a[data-lesson]');if(ml){if(pendingLog){clearTimeout(logT);pendingLog()}logClick('LESSON:'+ml.dataset.lesson);flushLog()}const a=e.target.closest('a[href*="youtube.com/watch"]');if(a){if(pendingLog){clearTimeout(logT);pendingLog()}const m=a.href.match(/v=([^&]+)(?:&t=(\d+)s)?/);if(m)logClick(m[1]+'@'+(m[2]||0));
+$('res').addEventListener('click',e=>{const mm=e.target.closest('.memmore');if(mm){mm.closest('.mem').outerHTML=memberBlock(MEMQ,true);return}const ml=e.target.closest('a[data-lesson]');if(ml){if(pendingLog){clearTimeout(logT);pendingLog()}logClick('LESSON:'+ml.dataset.lesson);flushLog()}const a=e.target.closest('a[href*="youtube.com/watch"]');if(a){if(pendingLog){clearTimeout(logT);pendingLog()}const m=a.href.match(/v=([^&]+)(?:&t=(\d+)s)?/);if(m)logClick(m[1]+'@'+(m[2]||0));
     if(m&&!(e.metaKey||e.ctrlKey||e.shiftKey||e.button)){const v=DATA.find(x=>x.id===m[1]);if(v){e.preventDefault();PL.queue=[];PL.path=null;$('plclip').textContent='';play(v,(+m[2]||0)+(m[2]?2:0));return}}}
   if(e.target.closest('#request')){clearTimeout(logT);pendingLog=null;logSearch($('q').value,0,0,'');logClick('REQUEST');flushLog();e.target.closest('.empty').innerHTML='Thanks. Your request was noted and helps decide what Kyle covers next. Members can also ask in <a href="https://community.audiouniversityonline.com/c/conversations" target="_top">Conversations</a>.';return}
   if(e.target.closest('#moreres')){shown+=25;run();return}const b=e.target.closest('.more');if(b){openSet.add(b.dataset.id);run()}});

@@ -103,7 +103,8 @@ def build(courses_path, map_path, vtt_dir, syn_path='syn.json'):
         pos = [x[0] for x in c['sections'][str(o['section'])]].index(o['lesson'])
         lessons.append({
             'c': course_keys.index(o['course']), 'id': o['lesson'], 's': int(o['section']),
-            'n': o['name'], 'sn': sec_name, 'o': pos, 'dur': cues[-1][0],
+            'n': o['name'], 'sn': sec_name, 'o': pos,
+            'so': list(c['sections'].keys()).index(str(o['section'])), 'dur': cues[-1][0],
             'nt': ' '.join(sorted({fnv(t) for t in tokens(o['name'] + ' ' + sec_name, syn_res)})),
             'w': hw,
         })
