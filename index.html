@@ -237,7 +237,7 @@ $('f').addEventListener('submit',e=>{e.preventDefault();openSet.clear();shown=25
 $('sort').addEventListener('change',()=>{shown=25;run()});
 let tmr;$('q').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(()=>{openSet.clear();shown=25;run()},200)});
 $('res').addEventListener('click',e=>{const a=e.target.closest('a[href*="youtube.com/watch"]');if(a){if(pendingLog){clearTimeout(logT);pendingLog()}const m=a.href.match(/v=([^&]+)(?:&t=(\d+)s)?/);if(m)logClick(m[1]+'@'+(m[2]||0))}
-  if(e.target.closest('#request')){clearTimeout(logT);logSearch($('q').value,0,0,'');logClick('REQUEST');flushLog();e.target.closest('.empty').innerHTML='Thanks. Your request was noted and helps decide what Kyle covers next. Members can also ask in <a href="https://community.audiouniversityonline.com/c/conversations" target="_top">Conversations</a>.';return}
+  if(e.target.closest('#request')){clearTimeout(logT);pendingLog=null;logSearch($('q').value,0,0,'');logClick('REQUEST');flushLog();e.target.closest('.empty').innerHTML='Thanks. Your request was noted and helps decide what Kyle covers next. Members can also ask in <a href="https://community.audiouniversityonline.com/c/conversations" target="_top">Conversations</a>.';return}
   if(e.target.closest('#moreres')){shown+=25;run();return}const b=e.target.closest('.more');if(b){openSet.add(b.dataset.id);run()}});
 $('chips').insertAdjacentHTML('beforeend',POP.map(p=>`<button type="button" class="chip">${esc(p)}</button>`).join(''));
 $('chips').addEventListener('click',e=>{const c=e.target.closest('.chip');if(c){$('q').value=c.textContent;openSet.clear();shown=25;run()}});
