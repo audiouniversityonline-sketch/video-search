@@ -63,10 +63,6 @@ select{height:44px;border-radius:10px;border:1px solid var(--line);background:va
 .pl .mo{margin-top:8px;max-height:30vh;overflow-y:auto;overflow-x:hidden}
 .pl .mo a.now{background:light-dark(#e8fff4,#10241a)}
 .playall{background:var(--acc);color:#000;border:0;border-radius:999px;font:500 14px Jost,sans-serif;padding:6px 14px;cursor:pointer;margin-left:8px}
-.paths{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:0 0 22px}
-.paths h2{grid-column:1/-1;margin:0;font-size:15px;font-weight:500;color:var(--sub)}
-.path{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--card)}
-.path h3{margin:0 0 4px;font-size:18px}.path p{margin:0 0 10px;color:var(--sub);font-size:14px}
 .sugg{background:none;border:0;padding:0;font:inherit;color:var(--acc-ink);text-decoration:underline;cursor:pointer}
 .more.all{display:block;margin:8px auto 0;border:1px solid var(--line);border-radius:999px;padding:8px 20px}
 .more{background:none;border:0;color:var(--acc-ink);font:500 15px Jost,sans-serif;padding:8px 0;cursor:pointer;min-height:44px}
@@ -87,7 +83,6 @@ mark{background:light-dark(#b9ffdc,#0f4a2d);color:inherit;border-radius:3px;padd
     <button class="go" type="submit">Search</button>
   </form>
   <div class="chips" id="chips"><span>Popular:</span></div>
-  <div class="paths" id="paths" hidden></div>
   <div class="bar"><div id="status" aria-live="polite"></div>
     <label>Sort <select id="sort"><option value="rel">Best match</option><option value="new">Newest</option><option value="views">Most viewed</option></select></label>
   </div>
@@ -246,7 +241,7 @@ function search(raw){const q=terms(raw);if(!q.list.length)return {q,list:[],loos
   if(!list.length&&q.list.length>1){list=DATA.map(v=>({v,s:score(v,q,0.01)})).filter(x=>x.s>0);if(list.length)loose=true}
   return {q,list,loose};
 }
-function run(){showPaths&&setTimeout(showPaths);
+function run(){
   let raw=$('q').value.trim();let r=search(raw),note='',fixed='';
   if(raw&&(!r.list.length||r.loose)){const fix=correct(raw);if(fix){const r2=search(fix);if(r2.list.length&&!r2.loose){fixed=fix;note=`Showing results for <button type="button" class="sugg" data-q="${esc(fix)}">${esc(fix)}</button>`;r=r2}}}
   else if(raw){const fix=correct(raw);if(fix&&search(fix).list.length>r.list.length)note=`Did you mean <button type="button" class="sugg" data-q="${esc(fix)}">${esc(fix)}</button>?`}
@@ -297,20 +292,6 @@ $('pl').addEventListener('click',e=>{if(e.target.id==='pl')closePl()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('pl').classList.contains('on'))closePl()});
 $('plmo').addEventListener('click',e=>{const st=e.target.closest('a[data-step]');if(st){e.preventDefault();PL.i=+st.dataset.step;playClip();return}const a=e.target.closest('a[data-sec]');if(!a)return;e.preventDefault();const sec=+a.dataset.sec;PL.queue=[];$('plclip').textContent='';logClick(PL.v.id+'@'+sec);play(PL.v,sec)});
 
-// ---------- learning paths (preview: shown with ?paths=1) ----------
-let PATHS=[];
-function showPaths(){
-  const el=$('paths');const on=new URLSearchParams(location.search).has('paths');
-  if(!on||!PATHS.length||$('q').value.trim()){el.hidden=true;return}
-  el.hidden=false;
-  el.innerHTML='<h2>Learning paths</h2>'+PATHS.map(p=>{const m=Math.round(p.steps.reduce((a,s)=>a+s[2]-s[1],0)/60);return `<div class="path"><h3>${esc(p.title)}</h3><p>${esc(p.who)} ${p.steps.length} clips, about ${m} minutes.</p><button type="button" class="playall" data-path="${esc(p.id)}">▶ Start</button></div>`}).join('');
-}
-function startPath(id,from=0){
-  const p=PATHS.find(x=>x.id===id);if(!p)return;
-  PL.path=p;PL.queue=p.steps.map(s=>({v:DATA.find(v=>v.id===s[0]),sec:s[1],end:s[2],label:s[3]})).filter(c=>c.v);PL.i=from;logClick('PATH:'+id);playClip();
-}
-$('paths').addEventListener('click',e=>{const b=e.target.closest('[data-path]');if(b)startPath(b.dataset.path)});
-fetch('paths.json').then(r=>r.json()).then(p=>{PATHS=p;showPaths()}).catch(()=>{});
 $('status').addEventListener('click',e=>{if(e.target.closest('.playall')){playAll(LASTLIST,lastQ);return}const b=e.target.closest('.sugg');if(b){$('q').value=b.dataset.q;openSet.clear();shown=25;run()}});
 $('f').addEventListener('submit',e=>{e.preventDefault();openSet.clear();shown=25;run()});
 $('sort').addEventListener('change',()=>{shown=25;run()});
