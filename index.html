@@ -48,6 +48,21 @@ select{height:44px;border-radius:10px;border:1px solid var(--line);background:va
 .mo a.hit .l{font-weight:500}
 .mo .in{color:var(--sub);font-size:14px}
 .mo .in b{font-weight:500;color:var(--ink)}
+
+.pl{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:max(2vh,12px) 12px;overflow:auto}
+.pl.on{display:flex}
+.pl .box{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;width:min(920px,100%);padding:14px}
+.pl .vid{position:relative;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}
+.pl .vid>div,.pl .vid iframe{position:absolute;inset:0;width:100%;height:100%}
+.pl .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin:0 0 10px}
+.pl h3{margin:0;font-size:18px;line-height:1.25}
+.pl .x{background:none;border:0;color:var(--ink);font-size:26px;line-height:1;cursor:pointer;min-width:44px;min-height:44px}
+.pl .links{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 4px;font-size:15px}
+.pl .links a{color:var(--acc-ink)}
+.pl .clip{font-size:14px;color:var(--sub);margin:8px 0 0}
+.pl .mo{margin-top:8px;max-height:30vh;overflow:auto}
+.pl .mo a.now{background:light-dark(#e8fff4,#10241a)}
+.playall{background:var(--acc);color:#000;border:0;border-radius:999px;font:500 14px Jost,sans-serif;padding:6px 14px;cursor:pointer;margin-left:8px}
 .sugg{background:none;border:0;padding:0;font:inherit;color:var(--acc-ink);text-decoration:underline;cursor:pointer}
 .more.all{display:block;margin:8px auto 0;border:1px solid var(--line);border-radius:999px;padding:8px 20px}
 .more{background:none;border:0;color:var(--acc-ink);font:500 15px Jost,sans-serif;padding:8px 0;cursor:pointer;min-height:44px}
@@ -72,6 +87,13 @@ mark{background:light-dark(#b9ffdc,#0f4a2d);color:inherit;border-radius:3px;padd
     <label>Sort <select id="sort"><option value="rel">Best match</option><option value="new">Newest</option><option value="views">Most viewed</option></select></label>
   </div>
   <div class="res" id="res"></div>
+  <div class="pl" id="pl" role="dialog" aria-modal="true" aria-labelledby="plt"><div class="box">
+    <div class="top"><h3 id="plt"></h3><button class="x" id="plx" aria-label="Close player">×</button></div>
+    <div class="vid"><div id="ytp"></div></div>
+    <p class="clip" id="plclip"></p>
+    <div class="links" id="pllinks"></div>
+    <div class="mo" id="plmo"></div>
+  </div></div>
   <p class="foot">Didn’t find it? Bring your question to Talkback Tuesday or post it in Conversations. Timestamps come from auto-generated captions, so a link can land a few seconds early or late.</p>
 </div>
 <script>
@@ -178,7 +200,7 @@ function card(v,q,open){
   ${rest>0?`<button class="more" data-id="${esc(v.id)}">Show all ${v.km.length} moments</button>`:''}</div></article>`;
 }
 let lastQ=null,openSet=new Set(),shown=25;
-let logT,pendingLog=null;
+let logT,pendingLog=null,LASTLIST=[];
 const LOG_URL='https://hooks.zapier.com/hooks/catch/16849809/p9RyDE3TT3bfgBgm/';
 const SESSION=Math.random().toString(36).slice(2,10);
 let LOG=[],sentUpTo=0;
@@ -229,14 +251,50 @@ function run(){
     $('status').innerHTML=(note?note+' · ':'')+(list.length?(loose?`No exact match for “${esc(raw)}”. Closest videos:`:`${list.length} video${list.length>1?'s':''} · ${n} matching moment${n===1?'':'s'}`):'')}
   const so=$('sort').value;
   list.sort(so==='new'?(a,b)=>b.v.d.localeCompare(a.v.d):so==='views'?(a,b)=>b.v.v-a.v.v:(a,b)=>b.s-a.s);
+  LASTLIST=q.list.length&&!loose?list:[];if(LASTLIST.length>1&&$('status').innerHTML)$('status').insertAdjacentHTML('beforeend',' <button type="button" class="playall">▶ Play top clips</button>');
   const total=list.length;list=list.slice(0,shown);
   $('res').innerHTML=list.length?list.map(x=>card(x.v,q,openSet.has(x.v.id))).join('')+(total>shown?`<button class="more all" id="moreres">Show ${Math.min(25,total-shown)} more videos (${total-shown} left)</button>`:''):`<div class="empty">No videos match “${esc(raw)}” yet. Try a broader word, like “monitor” instead of “wedge mix”, or pick a popular topic above.<div style="margin-top:12px"><button type="button" class="more" id="request">Request a video on this topic</button></div></div>`;
 }
-$('status').addEventListener('click',e=>{const b=e.target.closest('.sugg');if(b){$('q').value=b.dataset.q;openSet.clear();shown=25;run()}});
+
+// ---------- in-page player and clip playlists ----------
+let YTP=null,ytReady=null,PL={queue:[],i:0,v:null},endTimer=null;
+function loadYT(){if(ytReady)return ytReady;ytReady=new Promise(res=>{window.onYouTubeIframeAPIReady=()=>res();const t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t)});return ytReady}
+function clipEnd(v,sec){const nxt=v.km.map(k=>k[0]).filter(t=>t>sec+15).sort((a,b)=>a-b)[0];return Math.min(nxt||sec+90,sec+120)}
+function plMoments(v,cur){
+  const q=lastQ||terms('');const found=q.list.length?moments(v,q):[];
+  const all=v.km.map(k=>({sec:k[0],label:k[1],hit:found.some(f=>f.key&&f.sec===k[0])})).concat(found.filter(f=>f.said).map(f=>({sec:f.sec,label:'Mentions '+f.words.join(' '),hit:1}))).sort((a,b)=>a.sec-b.sec);
+  $('plmo').innerHTML=all.map(m=>`<a href="#" data-sec="${m.sec}" class="${m.hit?'hit':''}${Math.abs(m.sec-cur)<3?' now':''}"><span class="t">${fmt(m.sec)}</span><span class="l">${esc(m.label)}</span></a>`).join('');
+}
+function plShow(v,sec){
+  PL.v=v;$('plt').textContent=v.t;
+  const back=Math.max(0,sec-2);
+  $('pllinks').innerHTML=`<a href="https://www.youtube.com/watch?v=${esc(v.id)}&amp;t=${back}s" target="_blank" rel="noopener">Watch on YouTube</a>`+(v.c?`<a href="https://community.audiouniversityonline.com/c/learn/${esc(v.c)}" target="_top">Discuss in the community</a>`:'');
+  plMoments(v,sec);
+}
+async function play(v,sec,end){
+  $('pl').classList.add('on');document.body.style.overflow='hidden';plShow(v,sec);
+  await loadYT();const start=Math.max(0,sec-2);
+  const opts={videoId:v.id,startSeconds:start};if(end)opts.endSeconds=end;
+  if(!YTP){YTP=await new Promise(res=>{const p=new YT.Player('ytp',{videoId:v.id,playerVars:{start,autoplay:1,rel:0,modestbranding:1,playsinline:1,...(end?{end}:{})},events:{onReady:()=>res(p),onStateChange:onState}})})}
+  else YTP.loadVideoById(opts);
+}
+function onState(e){if(e.data===0&&PL.queue.length&&PL.i<PL.queue.length-1){PL.i++;playClip()}}
+function playClip(){const c=PL.queue[PL.i];$('plclip').textContent=`Clip ${PL.i+1} of ${PL.queue.length}`+(PL.i<PL.queue.length-1?' · the next one plays automatically':'');play(c.v,c.sec,c.end)}
+function playAll(list,q){
+  PL.queue=list.slice(0,5).map(x=>{const ms=moments(x.v,q);const m=ms.find(m=>m.key)||ms[0];return m?{v:x.v,sec:m.sec,end:clipEnd(x.v,m.sec)}:null}).filter(Boolean);
+  PL.i=0;if(PL.queue.length){logClick('PLAYLIST');playClip()}
+}
+function closePl(){$('pl').classList.remove('on');document.body.style.overflow='';PL.queue=[];$('plclip').textContent='';try{YTP&&YTP.pauseVideo()}catch(e){}}
+$('plx').addEventListener('click',closePl);
+$('pl').addEventListener('click',e=>{if(e.target.id==='pl')closePl()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('pl').classList.contains('on'))closePl()});
+$('plmo').addEventListener('click',e=>{const a=e.target.closest('a[data-sec]');if(!a)return;e.preventDefault();const sec=+a.dataset.sec;PL.queue=[];$('plclip').textContent='';logClick(PL.v.id+'@'+sec);play(PL.v,sec)});
+$('status').addEventListener('click',e=>{if(e.target.closest('.playall')){playAll(LASTLIST,lastQ);return}const b=e.target.closest('.sugg');if(b){$('q').value=b.dataset.q;openSet.clear();shown=25;run()}});
 $('f').addEventListener('submit',e=>{e.preventDefault();openSet.clear();shown=25;run()});
 $('sort').addEventListener('change',()=>{shown=25;run()});
 let tmr;$('q').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(()=>{openSet.clear();shown=25;run()},200)});
-$('res').addEventListener('click',e=>{const a=e.target.closest('a[href*="youtube.com/watch"]');if(a){if(pendingLog){clearTimeout(logT);pendingLog()}const m=a.href.match(/v=([^&]+)(?:&t=(\d+)s)?/);if(m)logClick(m[1]+'@'+(m[2]||0))}
+$('res').addEventListener('click',e=>{const a=e.target.closest('a[href*="youtube.com/watch"]');if(a){if(pendingLog){clearTimeout(logT);pendingLog()}const m=a.href.match(/v=([^&]+)(?:&t=(\d+)s)?/);if(m)logClick(m[1]+'@'+(m[2]||0));
+    if(m&&!(e.metaKey||e.ctrlKey||e.shiftKey||e.button)){const v=DATA.find(x=>x.id===m[1]);if(v){e.preventDefault();PL.queue=[];$('plclip').textContent='';play(v,(+m[2]||0)+(m[2]?2:0));return}}}
   if(e.target.closest('#request')){clearTimeout(logT);pendingLog=null;logSearch($('q').value,0,0,'');logClick('REQUEST');flushLog();e.target.closest('.empty').innerHTML='Thanks. Your request was noted and helps decide what Kyle covers next. Members can also ask in <a href="https://community.audiouniversityonline.com/c/conversations" target="_top">Conversations</a>.';return}
   if(e.target.closest('#moreres')){shown+=25;run();return}const b=e.target.closest('.more');if(b){openSet.add(b.dataset.id);run()}});
 $('chips').insertAdjacentHTML('beforeend',POP.map(p=>`<button type="button" class="chip">${esc(p)}</button>`).join(''));

@@ -23,7 +23,14 @@ def to_seconds(stamp):
     return total
 
 
+CIRCLE = {}
+
+
 def build(rows_path, glossary_path=None):
+    global CIRCLE
+    import os
+    if os.path.exists('circle-posts.json'):
+        CIRCLE = json.load(open('circle-posts.json'))
     rows = json.load(open(rows_path))
     if isinstance(rows, dict) and 'values' in rows:
         hdr = rows['values'][0]
@@ -43,6 +50,7 @@ def build(rows_path, glossary_path=None):
             'tp': [x.strip() for x in (r.get('topics') or '').split(';') if x.strip()],
             'g': [re.sub(r'\s*\(sponsor\)', '', x, flags=re.I).strip() for x in (r.get('gear_brands') or '').split(';') if x.strip()],
             'km': moments,
+            'c': CIRCLE.get(r['video_id'], '').replace('https://community.audiouniversityonline.com/c/learn/', ''),
         })
     json.dump(out, open('data.json', 'w'), ensure_ascii=False, separators=(',', ':'))
     if not glossary_path:
