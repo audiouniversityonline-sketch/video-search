@@ -178,6 +178,28 @@ function card(v,q,open){
   ${rest>0?`<button class="more" data-id="${esc(v.id)}">Show all ${v.km.length} moments</button>`:''}</div></article>`;
 }
 let lastQ=null,openSet=new Set(),shown=25;
+let logT,pendingLog=null;
+const LOG_URL='https://hooks.zapier.com/hooks/catch/16849809/p9RyDE3TT3bfgBgm/';
+const SESSION=Math.random().toString(36).slice(2,10);
+let LOG=[],sentUpTo=0;
+function logSearch(raw,results,moments,fix){
+  const q=raw.trim();if(q.length<3)return;
+  const last=LOG[LOG.length-1];
+  const entry={at:new Date().toISOString(),q,results,moments,fix:fix||'',clicked:[]};
+  if(last&&LOG.length>sentUpTo&&!last.clicked.length&&(q.toLowerCase().startsWith(last.q.toLowerCase())||last.q.toLowerCase().startsWith(q.toLowerCase()))){LOG[LOG.length-1]=entry}else LOG.push(entry);
+  if(LOG.length-sentUpTo>=20)flushLog();
+}
+function logClick(tag){const last=LOG[LOG.length-1];if(last){last.clicked.push(tag);if(LOG.length<=sentUpTo){/* already sent: resend this one */LOG.push({...last,clicked:[tag],at:new Date().toISOString()})}}}
+function flushLog(){
+  if(pendingLog){clearTimeout(logT);pendingLog()}
+  if(LOG.length<=sentUpTo)return;
+  const batch=LOG.slice(sentUpTo);sentUpTo=LOG.length;
+  const body=new URLSearchParams({data:JSON.stringify({session:SESSION,searches:batch})});
+  try{if(!(navigator.sendBeacon&&navigator.sendBeacon(LOG_URL,body)))fetch(LOG_URL,{method:'POST',body,mode:'no-cors',keepalive:true}).catch(()=>{})}catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushLog()});
+window.addEventListener('pagehide',flushLog);
+setInterval(flushLog,60000);
 let VOCAB=new Map();
 function addVocab(text,w){for(const t of text.toLowerCase().split(/[^a-z0-9'+\-]+/))if(t.length>2&&!/^\d+$/.test(t))VOCAB.set(t,(VOCAB.get(t)||0)+w)}
 function buildVocab(){VOCAB=new Map();DATA.forEach(v=>addVocab(v._all,3));for(const k in SYN)if(!k.includes(' '))VOCAB.set(k,(VOCAB.get(SYN[k])||1));for(const id in TR)for(const l of TR[id])addVocab(l[1],1)}
@@ -198,23 +220,25 @@ function search(raw){const q=terms(raw);if(!q.list.length)return {q,list:[],loos
   return {q,list,loose};
 }
 function run(){
-  let raw=$('q').value.trim();let r=search(raw),note='';
-  if(raw&&(!r.list.length||r.loose)){const fix=correct(raw);if(fix){const r2=search(fix);if(r2.list.length&&!r2.loose){note=`Showing results for <button type="button" class="sugg" data-q="${esc(fix)}">${esc(fix)}</button>`;r=r2}}}
+  let raw=$('q').value.trim();let r=search(raw),note='',fixed='';
+  if(raw&&(!r.list.length||r.loose)){const fix=correct(raw);if(fix){const r2=search(fix);if(r2.list.length&&!r2.loose){fixed=fix;note=`Showing results for <button type="button" class="sugg" data-q="${esc(fix)}">${esc(fix)}</button>`;r=r2}}}
   else if(raw){const fix=correct(raw);if(fix&&search(fix).list.length>r.list.length)note=`Did you mean <button type="button" class="sugg" data-q="${esc(fix)}">${esc(fix)}</button>?`}
   const q=r.q;lastQ=q;let list=r.list;const loose=r.loose;
   if(!q.list.length){list=DATA.slice().sort((a,b)=>b.d.localeCompare(a.d)).slice(0,8).map(v=>({v,s:0}));$('status').textContent='Newest videos'}
-  else{const n=list.reduce((a,x)=>a+moments(x.v,q).length,0);
+  else{const n=list.reduce((a,x)=>a+moments(x.v,q).length,0);clearTimeout(logT);const lq=raw,ll=loose?0:list.length,ln=n,lf=fixed;pendingLog=()=>{pendingLog=null;logSearch(lq,ll,ln,lf)};logT=setTimeout(()=>pendingLog&&pendingLog(),1500);
     $('status').innerHTML=(note?note+' · ':'')+(list.length?(loose?`No exact match for “${esc(raw)}”. Closest videos:`:`${list.length} video${list.length>1?'s':''} · ${n} matching moment${n===1?'':'s'}`):'')}
   const so=$('sort').value;
   list.sort(so==='new'?(a,b)=>b.v.d.localeCompare(a.v.d):so==='views'?(a,b)=>b.v.v-a.v.v:(a,b)=>b.s-a.s);
   const total=list.length;list=list.slice(0,shown);
-  $('res').innerHTML=list.length?list.map(x=>card(x.v,q,openSet.has(x.v.id))).join('')+(total>shown?`<button class="more all" id="moreres">Show ${Math.min(25,total-shown)} more videos (${total-shown} left)</button>`:''):`<div class="empty">No videos match “${esc(raw)}” yet. Try a broader word, like “monitor” instead of “wedge mix”, or pick a popular topic above.</div>`;
+  $('res').innerHTML=list.length?list.map(x=>card(x.v,q,openSet.has(x.v.id))).join('')+(total>shown?`<button class="more all" id="moreres">Show ${Math.min(25,total-shown)} more videos (${total-shown} left)</button>`:''):`<div class="empty">No videos match “${esc(raw)}” yet. Try a broader word, like “monitor” instead of “wedge mix”, or pick a popular topic above.<div style="margin-top:12px"><button type="button" class="more" id="request">Request a video on this topic</button></div></div>`;
 }
 $('status').addEventListener('click',e=>{const b=e.target.closest('.sugg');if(b){$('q').value=b.dataset.q;openSet.clear();shown=25;run()}});
 $('f').addEventListener('submit',e=>{e.preventDefault();openSet.clear();shown=25;run()});
 $('sort').addEventListener('change',()=>{shown=25;run()});
 let tmr;$('q').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(()=>{openSet.clear();shown=25;run()},200)});
-$('res').addEventListener('click',e=>{if(e.target.closest('#moreres')){shown+=25;run();return}const b=e.target.closest('.more');if(b){openSet.add(b.dataset.id);run()}});
+$('res').addEventListener('click',e=>{const a=e.target.closest('a[href*="youtube.com/watch"]');if(a){if(pendingLog){clearTimeout(logT);pendingLog()}const m=a.href.match(/v=([^&]+)(?:&t=(\d+)s)?/);if(m)logClick(m[1]+'@'+(m[2]||0))}
+  if(e.target.closest('#request')){clearTimeout(logT);logSearch($('q').value,0,0,'');logClick('REQUEST');flushLog();e.target.closest('.empty').innerHTML='Thanks. Your request was noted and helps decide what Kyle covers next. Members can also ask in <a href="https://community.audiouniversityonline.com/c/conversations" target="_top">Conversations</a>.';return}
+  if(e.target.closest('#moreres')){shown+=25;run();return}const b=e.target.closest('.more');if(b){openSet.add(b.dataset.id);run()}});
 $('chips').insertAdjacentHTML('beforeend',POP.map(p=>`<button type="button" class="chip">${esc(p)}</button>`).join(''));
 $('chips').addEventListener('click',e=>{const c=e.target.closest('.chip');if(c){$('q').value=c.textContent;openSet.clear();shown=25;run()}});
 Promise.all([fetch('data.json').then(r=>r.json()),fetch('syn.json').then(r=>r.json()).catch(()=>({}))]).then(([d,s])=>{
